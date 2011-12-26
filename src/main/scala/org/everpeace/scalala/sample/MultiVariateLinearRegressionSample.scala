@@ -47,9 +47,9 @@ object MultiVariateLinearRegressionSample {
     var theta = Vector.zeros[Double](3).asCol
 
     // optimization
-    println("\n======学習開始======")
+    println("\n======Start Learning======")
     val result = gradientDescent(X, y, theta, alpha, num_iters)
-    println("======学習完了======")
+    println("======Finish Learing======")
 
     // display learned result
     plot((1 to num_iters).toArray, result._2.toArray)
