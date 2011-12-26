@@ -8,7 +8,7 @@ organization:="everpeace.org"
 
 libraryDependencies  ++= Seq(
             // other dependencies here
-            "org.scalala" %% "scalala" % "1.0.0.RC3-SNAPSHOT"
+            "org.scalala" %% "scalala" % "1.0.0.RC2-SNAPSHOT"
 )
 
 resolvers ++= Seq(
