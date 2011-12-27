@@ -12,6 +12,7 @@ import scalala.library.Statistics._;
 import scalala.library.Plotting._;
 import scalala.operators.Implicits._;
 
+
 /**
  * Multi-Variate Linear Regression Sample By Scalala.
  *
@@ -108,7 +109,7 @@ object MultiVariateLinearRegressionSample {
     val mu = mean(X, Axis.Vertical)
     // calculate σ (standard deviation)
     val sigma = DenseVector.zeros[Double](X.numCols).asRow
-    for (i <- 0 until X.numCols) sigma(i) = sqrt(variance(X(::, i)))
+    for (i <- 0 until X.numCols) sigma(i) = X(::, i).stddev
 
     // for each feature update x to (x-μ)/σ
     for (i <- 0 until X.numRows)
