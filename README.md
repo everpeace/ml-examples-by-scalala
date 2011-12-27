@@ -4,7 +4,7 @@
 
 * uni-Variate Linear Regression: comming soon.
 * [multi-Variate Linear Regression](https://github.com/everpeace/ml-examples-by-scalala/blob/master/src/main/scala/org/everpeace/scalala/sample/MultiVariateLinearRegressionSample.scala): perform 2-variate linear regression by gradient descent algorithm.
-* Regularized Logistic Regression: comming soon.
+* [Regularized Logistic Regression](https://github.com/everpeace/ml-examples-by-scalala/blob/master/src/main/scala/org/everpeace/scalala/sample/RegularizedLogisticRegressionSample.scala): perform learning logistic classifier by gradient descent algorithm.
 
 
 ## License
