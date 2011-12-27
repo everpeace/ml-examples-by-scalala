@@ -45,20 +45,20 @@ object MultiVariateLinearRegressionSample {
     // learning parameters
     val alpha = 0.1d
     val num_iters = 100
-    var theta = Vector.zeros[Double](3).asCol
+    var initTheta = Vector.zeros[Double](3).asCol
 
     // optimization
     println("\n======Start Learning======")
-    val result = gradientDescent(X, y, theta, alpha, num_iters)
+    val (learnedTheta, histOfCost) = gradientDescent(initTheta, computeCostAndGrad(X, y), alpha, num_iters)
     println("======Finish Learing======")
 
     // display learned result
-    plot((1 to num_iters).toArray, result._2.toArray)
+    plot((1 to num_iters).toArray, histOfCost)
     xlabel("number of iterations")
     ylabel("cost")
     title("History of Cost")
-    print("\nLeraned Parameters(Bias,Area,#BedRooms):\t" + theta.asRow)
-    println("Learned Cost:\t" + result._2(num_iters - 1))
+    print("\nLeraned Parameters(Bias,Area,#BedRooms):\t" + learnedTheta.asRow)
+    println("Learned Cost:\t" + histOfCost(histOfCost.length - 1))
     println("\n\nTo finish this program, close the cost's history window.")
   }
 
@@ -67,39 +67,14 @@ object MultiVariateLinearRegressionSample {
   // X: feature row vector is stored in each row
   // y: y's column vector coresponding to feature row vector.
   // theta: parameter column vector
-  def computeCost(X: Matrix[Double], y: VectorCol[Double], theta: VectorCol[Double]): Double = {
+  def computeCostAndGrad(X: Matrix[Double], y: VectorCol[Double])(theta: VectorCol[Double]): (Double, VectorCol[Double]) = {
     val diff = X * theta - y
     val m = y.length
+    val p = theta.length
     val cost = (diff.t * diff) / (2 * m)
-    cost
-  }
-
-  // Gradient Descent
-  // X: feature row vector is stored in each row
-  // y: y's column vector, each value is corresponding to each feature row vector.
-  // theta: parameter column vector
-  // alpha: learning rate
-  // num_iters: number of iterations
-  def gradientDescent(X: Matrix[Double], y: VectorCol[Double], theta: VectorCol[Double], alpha: Double, num_iters: Int) = {
-    val m = y.length
-    val p = X.numCols
-    val J_history = Vector.zeros[Double](num_iters)
-
-    for (n <- 0 until num_iters) {
-      // backup previous theta
-      val theta_prev = Vector.zeros[Double](theta.length).asCol
-      for (i <- 0 until theta.length) theta_prev(i) = theta(i)
-
-      // update theta
-      // theta_i = theta_i - alpha* d(Cost)/d(theta_i)
-      for (i <- 0 until p) {
-        val derivation = ((X * theta_prev - y).t * X(::, i)) / m;
-        theta(i) = (theta_prev(i) - (alpha * derivation))
-      }
-      J_history(n) = computeCost(X, y, theta)
-      print("n=" + (n + 1).toString + "/" + num_iters + ": cost = " + J_history(n) + "\t theta = " + theta.asRow)
-    }
-    (theta, J_history)
+    val grad = DenseVector.zeros[Double](theta.length)
+    for (i <- 0 until p) grad(i) = ((X * theta - y).t * X(::, i)) / m
+    (cost, grad)
   }
 
   // normalize the features to average = 0, standard deviation = 1.0
