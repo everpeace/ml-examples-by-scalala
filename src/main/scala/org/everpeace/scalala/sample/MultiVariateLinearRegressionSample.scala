@@ -1,16 +1,16 @@
 package org.everpeace.scalala.sample
 
 import scala.io.Source.fromFile
-import scalala.scalar._;
-import scalala.tensor.::;
-import scalala.tensor.mutable._;
-import scalala.tensor.dense._;
-import scalala.tensor.sparse._;
-import scalala.library.Library._;
-import scalala.library.LinearAlgebra._;
-import scalala.library.Statistics._;
-import scalala.library.Plotting._;
-import scalala.operators.Implicits._;
+import scalala.scalar._
+import scalala.tensor.::
+import scalala.tensor.mutable._
+import scalala.tensor.dense._
+import scalala.tensor.sparse._
+import scalala.library.Library._
+import scalala.library.LinearAlgebra._
+import scalala.library.Statistics._
+import scalala.library.Plotting._
+import scalala.operators.Implicits._
 
 
 /**
@@ -24,9 +24,10 @@ object MultiVariateLinearRegressionSample {
   def main(args: Array[String]): Unit = run
 
   def run: Unit = {
+
     // loading sample data
     val reg = "([0-9]+)\\,([0-9]+)\\,([0-9]+)*".r
-    val data = DenseMatrix(fromFile("MultiVariateLinearRegression.txt").getLines().toList.flatMap(_ match {
+    val data = DenseMatrix(fromFile("data/MultiVariateLinearRegression.txt").getLines().toList.flatMap(_ match {
       case reg(x1, x2, y) => Seq((x1.toDouble, x2.toDouble, y.toDouble))
       case _ => Seq.empty
     }): _*)
@@ -38,19 +39,20 @@ object MultiVariateLinearRegressionSample {
     val norm = normalizeFeatures(X)
     print("\n\naverage(Area, #BedRooms) =" + norm._2)
     print("Std. Dev.(Area, #BedRooms) =" + norm._3)
+
+
     // adding bias term ( X => [1 ; normalized_x1 ; normalized_x2] )
     X = DenseMatrix.horzcat(DenseMatrix.ones[Double](X.numRows, 1), norm._1)
     print("Normalized Data (added bias term):\n" + X)
+
 
     // learning parameters
     val alpha = 0.1d
     val num_iters = 100
     var initTheta = Vector.zeros[Double](3).asCol
 
-    // optimization
-    println("\n======Start Learning======")
+    // learning
     val (learnedTheta, histOfCost) = gradientDescent(initTheta, computeCostAndGrad(X, y), alpha, num_iters)
-    println("======Finish Learing======")
 
     // display learned result
     plot((1 to num_iters).toArray, histOfCost)
@@ -70,10 +72,8 @@ object MultiVariateLinearRegressionSample {
   def computeCostAndGrad(X: Matrix[Double], y: VectorCol[Double])(theta: VectorCol[Double]): (Double, VectorCol[Double]) = {
     val diff = X * theta - y
     val m = y.length
-    val p = theta.length
     val cost = (diff.t * diff) / (2 * m)
-    val grad = DenseVector.zeros[Double](theta.length)
-    for (i <- 0 until p) grad(i) = ((X * theta - y).t * X(::, i)) / m
+    val grad = (((X * theta - y).t * X) / m).t
     (cost, grad)
   }
 

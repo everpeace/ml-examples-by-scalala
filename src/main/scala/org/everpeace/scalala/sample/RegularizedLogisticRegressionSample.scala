@@ -27,7 +27,7 @@ object RegularizedLogisticRegressionSample {
   def run: Unit = {
     // loading sample data
     val reg = "(-?[0-9]*\\.[0-9]+)\\,(-?[0-9]*\\.[0-9]+)\\,([01])*".r
-    val data: Matrix[Double] = DenseMatrix(fromFile("RegularizedLogisticRegression.txt").getLines().toList.flatMap(_ match {
+    val data: Matrix[Double] = DenseMatrix(fromFile("data/RegularizedLogisticRegression.txt").getLines().toList.flatMap(_ match {
       case reg(x1, x2, y) => Seq((x1.toDouble, x2.toDouble, y.toDouble))
       case _ => Seq.empty
     }): _*)
@@ -92,7 +92,7 @@ object RegularizedLogisticRegressionSample {
 
     // calculate grads
     // grad = (X'*(h - y) + lambda * _theta) / m;
-    val grad = (X.t * (h :- y) + lambda :* _theta) / m
+    val grad = ((X.t * (h :- y)) :+ (lambda :* _theta)) / m
 
     (cost, grad)
   }
