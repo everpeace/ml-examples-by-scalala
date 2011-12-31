@@ -22,6 +22,8 @@ import java.awt.{Color, Paint}
  */
 
 object RegularizedLogisticRegressionSample {
+  type ~>[-A,+B] = PartialFunction[A,B]
+
   def main(args: Array[String]): Unit = run
 
   def run: Unit = {
@@ -114,23 +116,13 @@ object RegularizedLogisticRegressionSample {
     val x2 = data(::, 1)
     val posx1 = x1(posIdx: _*)
     val posx2 = x2(posIdx: _*)
-    val acceptedColors: PartialFunction[Int, Paint] = {
-      case i => Color.BLUE
-    }
-    val acceptedTips: PartialFunction[Int, String] = {
-      case i: Int => "ACCEPTED(" + posx1(i).toString + "," + posx2(i).toString + ")"
-    }
-    scatter(posx1, posx2, Vector.fill(posIdx.length)(0.03), acceptedColors, tips = acceptedTips, name = "accepted")
+    val acceptedTips = (i: Int) => "ACCEPTED(" + posx1(i).toString + "," + posx2(i).toString + ")"
+    scatter(posx1, posx2, Vector.fill(posIdx.length)(0.03), {case _ => Color.BLUE}:Int~>Paint, tips = {case i: Int => acceptedTips(i)}:Int~>String, name = "accepted")
 
     val negx1 = x1(negIdx: _*)
     val negx2 = x2(negIdx: _*)
-    val rejectedColors: PartialFunction[Int, Paint] = {
-      case i => Color.RED
-    }
-    val rejectedTips: PartialFunction[Int, String] = {
-      case i: Int => "REJECTED(" + negx1(i).toString + "," + negx2(i).toString + ")"
-    }
-    scatter(negx1, negx2, Vector.fill(negIdx.length)(0.03), rejectedColors, tips = rejectedTips, name = "rejected")
+    val rejectedTip= (i:Int) => "REJECTED(" + negx1(i).toString + "," + negx2(i).toString + ")"
+    scatter(negx1, negx2, Vector.fill(negIdx.length)(0.03), {case _ => Color.RED}:Int~>Paint, tips = {case i: Int => rejectedTip(i)}:Int~>String, name = "rejected")
 
     xlabel("Test1 score")
     ylabel("Test2 score")
@@ -161,13 +153,7 @@ object RegularizedLogisticRegressionSample {
     val boundaryY = for (p <- boundary) yield p._2
 
     //plot boundary
-    val boundaryColors: PartialFunction[Int, Paint] = {
-      case i => Color.YELLOW
-    }
-    val boundaryTips: PartialFunction[Int, String] = {
-      case i => "boundary"
-    }
-    scatter(u(boundaryX: _*), v(boundaryY: _*), Vector.fill(boundary.length)(0.03), boundaryColors, tips = boundaryTips, name = "boundary")
+    scatter(u(boundaryX: _*), v(boundaryY: _*), Vector.fill(boundary.length)(0.03), {case _ => Color.YELLOW}:Int~>Paint, tips = {case _ => "boundary"}:Int~>String, name = "boundary")
     title("yellow circles indicate decision boundary")
     plot.hold = false
   }
