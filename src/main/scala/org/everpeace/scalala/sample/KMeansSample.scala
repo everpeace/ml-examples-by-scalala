@@ -11,6 +11,7 @@ import scalala.library.LinearAlgebra._
 import scalala.library.Statistics._
 import scalala.library.Plotting._
 import scalala.operators.Implicits._
+import java.awt.{Paint, Color}
 
 
 /**
@@ -20,6 +21,8 @@ import scalala.operators.Implicits._
  */
 
 object KMeansSample {
+  type ~>[-A, +B] = PartialFunction[A, B]
+
   def main(args: Array[String]): Unit = run
 
   def run: Unit = {
@@ -33,11 +36,40 @@ object KMeansSample {
 
     val init_centroids = DenseMatrix((3d, 3d), (6d, 2d), (8d, 5d))
     val max_iters = 10
-    val (_, centroids_hist) = runKMeans(data, init_centroids, max_iters)
+    val kMeansResult = runKMeans(data, init_centroids, max_iters)
 
-    println("\n\nLEARNED CENTROIDS:\n" + centroids_hist.last)
+    println("\n\nLEARNED CENTROIDS:\n" + kMeansResult.last._2)
+    println("\n\n")
 
-    // TODO  draw K-Mean result.
+    // plot data and KMeans result.
+    val size = (s: Double) => (n: Int) => DenseVector.fill(n)(s)
+    val clusterColor: Int => Paint = _ match {
+      case 1 => Color.YELLOW
+      case 2 => Color.RED
+      case 3 => Color.BLUE
+      case _ => Color.BLACK
+    }
+    val idx2color: Vector[Int] => (Int ~> Paint) = v => {   case i => clusterColor(v(i)) }
+
+    for (i <- 0 until kMeansResult.size) {
+      val idx = kMeansResult(i)._1
+      val centroids = kMeansResult(i)._2
+      clf
+      scatter(centroids(::, 0), centroids(::, 1), size(0.4)(centroids.numRows), {case i => clusterColor(i+1)}:Int~>Paint)
+      xlabel("x1")
+      ylabel("x2")
+      title("K-Means %d-th iteration result.\n large circles indicates centeroids.".format(i+1))
+      plot.hold = true
+      scatter(data(::, 0), data(::, 1), size(0.2)(data.numRows), idx2color(idx))
+      plot.hold = false
+      if(i != kMeansResult.size -1){
+        print("paused... to display %d-th iteration result, press enter.".format(i+2))
+        readLine()
+      }
+    }
+    title("K-Means result after %d iterations.\n large circles indicates centeroids.".format(kMeansResult.size))
+
+    println("\n\nTo finish this program, close K-Means result window.")
   }
 
   // compute each centroids.
@@ -73,7 +105,7 @@ object KMeansSample {
 
   // run K-means iteratively.
   // returns history of index vectors and centroids.
-  def runKMeans(X: Matrix[Double], init_centroids: Matrix[Double], max_iters: Int): (Seq[Vector[Int]], Seq[Matrix[Double]]) = {
+  def runKMeans(X: Matrix[Double], init_centroids: Matrix[Double], max_iters: Int): Seq[(Vector[Int], Matrix[Double])] = {
     val K = init_centroids.numRows
     var centroids_hist = Seq[Matrix[Double]]()
     var idx_hist = Seq[Vector[Int]]()
@@ -89,6 +121,6 @@ object KMeansSample {
       idx_hist = idx +: idx_hist
     }
     println("=== finish K-Means loop ===")
-    (idx_hist.reverse, centroids_hist.reverse)
+    idx_hist.reverse.zip(centroids_hist.reverse)
   }
 }
