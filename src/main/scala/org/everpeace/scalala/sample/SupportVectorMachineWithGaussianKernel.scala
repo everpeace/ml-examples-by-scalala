@@ -128,7 +128,7 @@ object SupportVectorMachineWithGaussianKernel {
 
     val _idx = alphas.findAll(_ > 0.0d).toSeq
     val _X = X(_idx, ::)
-    val _Y = Y2(_idx, ::)
+    val _Y = Y2(_idx)
     val _kernel = kernel
     val _b = b
     val _alphas = alphas(_idx)
