@@ -22,7 +22,6 @@ import java.awt.{Color, Paint}
  */
 
 object RegularizedLogisticRegressionSample {
-  type ~>[-A,+B] = PartialFunction[A,B]
 
   def main(args: Array[String]): Unit = run
 
@@ -35,9 +34,9 @@ object RegularizedLogisticRegressionSample {
     }): _*)
     println("Data Loaded:\nTest1Score\tTest2Score\tResult(1=accepted/0=rejected)\n" + data)
 
-    var y = data(::, 2)
     // Scalala cannot DenseMatrix(Cols) but DenseMatrix(Rows).
-    var X = DenseMatrix(mapFeatures(data(::, 0).asRow, data(::, 1).asRow): _*).t
+    var X = mapFeatures(data(::, 0), data(::, 1))
+    var y = data(::, 2)
 
     // parameters to learn.
     val init_theta = DenseVector.zeros[Double](X.numCols).asCol;
@@ -46,30 +45,34 @@ object RegularizedLogisticRegressionSample {
     // gradient descent parameters
     val alpha = 5d;
     val num_iters = 500;
-    val (learnedTheta, costHistory) = gradientDescent(init_theta, costFunctionAndGrad(X, y, lambda), alpha, num_iters)
+    val (learnedTheta, costHistory)
+    = gradientDescent(init_theta,
+                                  costFunctionAndGrad(X, y, lambda),
+                                  alpha, num_iters)
+    val accr = accuracy(y, predict(learnedTheta)(data(::,0 to 1)))
+    println("\nTraining Accuracy:%2.2f percent\n\n".format(accr * 100))
 
-    print("paused... press enter.")
+    print("paused... press enter to plot learning results.")
     readLine()
     println("displaying leaning history of cost value.")
+    subplot(2, 1, 1)
     plotLeraningHistory(costHistory)
-    print("paused... press enter.")
-    readLine()
     println("displaying sample data(blue:accepted, red:rejected) and learned decision boundary(yellow).")
+    subplot(2, 1, 2)
     plotDecisionBoundary(data, learnedTheta)
 
-    val prediction = sigmoid(X * learnedTheta).map(v => if (v >= 0.5) 1.0d else 0.0d)
-    val corrects = (y :== prediction).map(if (_) 1.0d else 0.0d)
-    println("\nTraining Accuracy:%2.2f percent".format(mean(corrects) * 100))
     println("\nTo finish this program, close all chart windows.")
   }
 
   // maps the two input features to quadratic features.
   // Returns a new feature sequence with more features,
   // comprising of X1, X2, X1.^2, X2.^2, X1*X2, X1*X2.^2, etc..
-  def mapFeatures(X1: VectorRow[Double], X2: VectorRow[Double]): Seq[VectorRow[Double]]
+  def mapFeatures(X1: Vector[Double], X2: Vector[Double]): Matrix[Double]
   = {
     val degree = 6
-    for (i <- 0 to degree; j <- 0 to i) yield ((X1 :^ (i - j)) :* (X2 :^ j)).asRow
+    val featureRows: Seq[VectorRow[Double]]
+    = for (i <- 0 to degree; j <- 0 to i) yield ((X1.asRow :^ (i - j)) :* (X2.asRow :^ j))
+    DenseMatrix(featureRows: _*).t
   }
 
 
@@ -99,6 +102,12 @@ object RegularizedLogisticRegressionSample {
     (cost, grad)
   }
 
+  // predict whether each sample is accepted or not.
+  def predict(theta: Vector[Double])(X: Matrix[Double]): Vector[Double] = {
+    val mapped = mapFeatures(X(::, 0), X(::, 1))
+    sigmoid(mapped * theta.asCol).map(p => if (p >= 0.5) 1.0d else 0.0d)
+  }
+
   // plot History of cost
   def plotLeraningHistory(cost_hist: VectorCol[Double]): Unit = {
     figure(1)
@@ -114,15 +123,26 @@ object RegularizedLogisticRegressionSample {
     val negIdx = data(::, 2).findAll(_ == 0.0).toSeq
     val x1 = data(::, 0)
     val x2 = data(::, 1)
+
     val posx1 = x1(posIdx: _*)
     val posx2 = x2(posIdx: _*)
     val acceptedTips = (i: Int) => "ACCEPTED(" + posx1(i).toString + "," + posx2(i).toString + ")"
-    scatter(posx1, posx2, Vector.fill(posIdx.length)(0.03), {case _ => Color.BLUE}:Int~>Paint, tips = {case i: Int => acceptedTips(i)}:Int~>String, name = "accepted")
+    scatter(posx1, posx2, circleSize(0.03)(posIdx.length), {
+      case _ => Color.BLUE
+    }: Int ~> Paint,
+      tips = {
+        case i: Int => acceptedTips(i)
+      }: Int ~> String, name = "accepted")
 
     val negx1 = x1(negIdx: _*)
     val negx2 = x2(negIdx: _*)
-    val rejectedTip= (i:Int) => "REJECTED(" + negx1(i).toString + "," + negx2(i).toString + ")"
-    scatter(negx1, negx2, Vector.fill(negIdx.length)(0.03), {case _ => Color.RED}:Int~>Paint, tips = {case i: Int => rejectedTip(i)}:Int~>String, name = "rejected")
+    val rejectedTip = (i: Int) => "REJECTED(" + negx1(i).toString + "," + negx2(i).toString + ")"
+    scatter(negx1, negx2, circleSize(0.03)(negIdx.length), {
+      case _ => Color.RED
+    }: Int ~> Paint,
+      tips = {
+        case i: Int => rejectedTip(i)
+      }: Int ~> String, name = "rejected")
 
     xlabel("Test1 score")
     ylabel("Test2 score")
@@ -131,30 +151,19 @@ object RegularizedLogisticRegressionSample {
   // plot decision boundary
   // scalala doesn't have contour, so this searches boundary manually.
   def plotDecisionBoundary(data: Matrix[Double], theta: VectorCol[Double]): Unit = {
-    figure(2)
     plot.hold = true
     plotSampleData(data)
 
-    // the grid range
-    val u = linspace(-1, 1.5, 100);
-    val v = linspace(-1, 1.5, 100);
-    val z = DenseMatrix.zeros[Double](u.length, v.length);
-
-    // Evaluate accepted probability
-    for (i <- 0 until u.length; j <- 0 until v.length) {
-      val mappedUV = DenseMatrix(mapFeatures(DenseVector(u(i)).asRow, DenseVector(v(j)).asRow): _*).t
-      val p = sigmoid(DenseVector(mappedUV(0, ::) * theta).asCol)
-      z(i, j) = p(0)
-    }
-
-    // calculate boundary manually
-    val boundary = for (p <- z.findAll(v => (v - 0.5).abs <= 0.01).toSeq) yield p
-    val boundaryX = for (p <- boundary) yield p._1
-    val boundaryY = for (p <- boundary) yield p._2
+    // compute decision boundaries
+    val x1range = linspace(-1, 1.5, 100);
+    val x2range = linspace(-1, 1.5, 100);
+    val (bx, by) = computeDecisionBoundary(x1range, x2range, predict(theta))
 
     //plot boundary
-    scatter(u(boundaryX: _*), v(boundaryY: _*), Vector.fill(boundary.length)(0.03), {case _ => Color.YELLOW}:Int~>Paint, tips = {case _ => "boundary"}:Int~>String, name = "boundary")
-    title("yellow circles indicate decision boundary")
+    scatter(bx, by, circleSize(0.03)(bx.length), {
+      case _ => Color.YELLOW
+    }: Int ~> Paint)
+    title("Learned Decision Boundary\n (blue:accepted, red:rejected, yellow: boundary)")
     plot.hold = false
   }
 }

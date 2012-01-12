@@ -21,7 +21,6 @@ import java.awt.{Paint, Color}
  */
 
 object KMeansSample {
-  type ~>[-A, +B] = PartialFunction[A, B]
 
   def main(args: Array[String]): Unit = run
 
@@ -42,25 +41,16 @@ object KMeansSample {
     println("\n\n")
 
     // plot data and KMeans result.
-    val size = (s: Double) => (n: Int) => DenseVector.fill(n)(s)
-    val clusterColor: Int => Paint = _ match {
-      case 1 => Color.YELLOW
-      case 2 => Color.RED
-      case 3 => Color.BLUE
-      case _ => Color.BLACK
-    }
-    val idx2color: Vector[Int] => (Int ~> Paint) = v => {   case i => clusterColor(v(i)) }
-
     for (i <- 0 until kMeansResult.size) {
       val idx = kMeansResult(i)._1
       val centroids = kMeansResult(i)._2
       clf
-      scatter(centroids(::, 0), centroids(::, 1), size(0.4)(centroids.numRows), {case i => clusterColor(i+1)}:Int~>Paint)
+      scatter(centroids(::, 0), centroids(::, 1), circleSize(0.4)(centroids.numRows), {case i => clusterColor(i+1)}:Int~>Paint)
       xlabel("x1")
       ylabel("x2")
       title("K-Means %d-th iteration result.\n large circles indicates centeroids.".format(i+1))
       plot.hold = true
-      scatter(data(::, 0), data(::, 1), size(0.2)(data.numRows), idx2color(idx))
+      scatter(data(::, 0), data(::, 1), circleSize(0.1)(data.numRows), idx2color(idx))
       plot.hold = false
       if(i != kMeansResult.size -1){
         print("paused... to display %d-th iteration result, press enter.".format(i+2))
@@ -123,4 +113,12 @@ object KMeansSample {
     println("=== finish K-Means loop ===")
     idx_hist.reverse.zip(centroids_hist.reverse)
   }
+
+  val clusterColor: Int => Paint = _ match {
+    case 1 => Color.YELLOW
+    case 2 => Color.RED
+    case 3 => Color.BLUE
+    case _ => Color.BLACK
+  }
+  val idx2color: Vector[Int] => (Int ~> Paint) = v => {   case i => clusterColor(v(i)) }
 }

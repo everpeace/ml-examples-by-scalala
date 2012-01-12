@@ -40,11 +40,9 @@ object MultiVariateLinearRegressionSample {
     print("\n\naverage(Area, #BedRooms) =" + norm._2)
     print("Std. Dev.(Area, #BedRooms) =" + norm._3)
 
-
     // adding bias term ( X => [1 ; normalized_x1 ; normalized_x2] )
     X = DenseMatrix.horzcat(DenseMatrix.ones[Double](X.numRows, 1), norm._1)
     print("Normalized Data (added bias term):\n" + X)
-
 
     // learning parameters
     val alpha = 0.1d

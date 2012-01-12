@@ -20,7 +20,6 @@ import java.awt.{Paint, Color}
  */
 
 object UniVariateLinearRegressionSample {
-  type ~>[-A,+B] = PartialFunction[A,B]
 
   def main(args: Array[String]): Unit = run
 
@@ -31,13 +30,11 @@ object UniVariateLinearRegressionSample {
       case reg(x, y) => Seq((x.toDouble, y.toDouble))
       case _ => Seq.empty
     }): _*)
-    val size = (s: Int) => DenseVector.fill(s)(0.3)
 
-    figure(1)
     plot.hold = true
-    scatter(data(::, 0), data(::, 1), size(data.numRows), {case _ => Color.BLUE}:Int~>Paint)
-    xlabel("size")
-    ylabel("gain")
+    scatter(data(::, 0), data(::, 1), circleSize(0.3)(data.numRows), {case _ => Color.BLUE}:Int~>Paint)
+    xlabel("x1")
+    ylabel("x2")
     title("sample data")
 
     // add bias term to X

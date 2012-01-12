@@ -22,6 +22,8 @@ import scalala.generic.collection.CanMapValues
  */
 
 package object sample {
+  type ~>[-A, +B] = PartialFunction[A, B]
+  val circleSize = (s: Double) => (n: Int) => DenseVector.fill(n)(s)
 
   // gradient descent. this returns optimal theta(paremeter column vector) and history of cost value.
   // initTheta: paremeters column vector
@@ -48,15 +50,43 @@ package object sample {
   }
 
   // construct mesh grid.
-  def meshgrid(x: Vector[Double], y: Vector[Double]): (Matrix[Double], Matrix[Double]) = {
-    val xMesh = DenseMatrix.zeros[Double](y.length, x.length)
-    for (i <- 0 until y.length) {
-      xMesh(i, ::) := x.asRow
+  def meshgrid(x1: Vector[Double], x2: Vector[Double]): (Matrix[Double], Matrix[Double]) = {
+    val x1Mesh = DenseMatrix.zeros[Double](x2.length, x1.length)
+    for (i <- 0 until x2.length) {
+      x1Mesh(i, ::) := x1.asRow
     }
-    val yMesh = DenseMatrix.zeros[Double](y.length, x.length)
-    for (i <- 0 until x.length) {
-      yMesh(::, i) := y.asCol
+    val x2Mesh = DenseMatrix.zeros[Double](x2.length, x1.length)
+    for (i <- 0 until x1.length) {
+      x2Mesh(::, i) := x2.asCol
     }
-    (xMesh, yMesh)
+    (x1Mesh, x2Mesh)
   }
+
+  def computeDecisionBoundary(x1: Vector[Double], x2: Vector[Double], predict: Matrix[Double] => Vector[Double]): (Vector[Double], Vector[Double]) = {
+    val (x1Mesh, x2Mesh) = meshgrid(x1, x2)
+    val decisions = DenseMatrix.zeros[Double](x1Mesh.numRows, x1Mesh.numCols)
+
+    // compute decisions for all mesh points.
+    for (i <- 0 until x1Mesh.numCols) {
+      val this_X: Matrix[Double] = DenseMatrix(x1Mesh(::, i).asRow, x2Mesh(::, i).asRow).t
+      decisions(::, i) := predict(this_X)
+    }
+
+    // detect boundary.
+    var bx1 = Seq[Double]()
+    var bx2 = Seq[Double]()
+    for (i <- 1 until decisions.numRows - 1; j <- 1 until decisions.numCols - 1) {
+      if (decisions(i, j) == 0d && (decisions(i - 1, j - 1) == 1d || decisions(i - 1, j) == 1d || decisions(i - 1, j + 1) == 1d
+        || decisions(i, j - 1) == 1d || decisions(i, j + 1) == 1d
+        || decisions(i + 1, j) == 1d || decisions(i + 1, j) == 1d || decisions(i + 1, j + 1) == 1d)) {
+        bx1 = x1Mesh(i, j) +: bx1
+        bx2 = x2Mesh(i, j) +: bx2
+      }
+    }
+
+    (Vector(bx1: _*), Vector(bx2: _*))
+  }
+
+  def accuracy(y: Vector[Double], pred: Vector[Double]): Double
+  = mean((y :== pred).map(if (_) 1.0d else 0.0))
 }
