@@ -54,7 +54,7 @@ object SupportVectorMachineWithGaussianKernel {
     // C: regularized parameter
     // sigma: gaussian Kernel parameter
     val C = 1d
-    val sigma = 0.5d
+    val sigma = 0.1d
 
     // learn svm
     println("\n\npaused... press enter to start learning SVM.")
