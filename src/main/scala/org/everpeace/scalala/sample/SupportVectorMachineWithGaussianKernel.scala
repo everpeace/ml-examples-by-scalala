@@ -11,6 +11,7 @@ import scalala.library.LinearAlgebra._
 import scalala.library.Statistics._
 import scalala.library.Plotting._
 import scalala.operators.Implicits._
+import java.awt.{Color, Paint}
 
 
 /**
@@ -24,20 +25,65 @@ object SupportVectorMachineWithGaussianKernel {
 
   def main(args: Array[String]): Unit = run
 
+  val i2color: Int => Paint = _ match {
+    case 1 => Color.BLUE //accepted
+    case 0 => Color.RED //rejected
+    case _ => Color.BLACK //other
+  }
+  val y2Color: Vector[Double] => (Int ~> Paint) = y => { case i => i2color(y(i).toInt)  }
+  val circleSize = (s: Double) => (n: Int) => DenseVector.fill(n)(s)
+
   def run: Unit = {
-    //TODO under construction
+    // loading sample data
+    val reg = "(-?[0-9]*\\.[0-9]+)\\,(-?[0-9]*\\.[0-9]+)\\,([01])*".r
+    val data: Matrix[Double] = DenseMatrix(fromFile("data/SupportVectorMachineWithGaussianKernel.txt").getLines().toList.flatMap(_ match {
+      case reg(x1, x2, y) => Seq((x1.toDouble, x2.toDouble, y.toDouble))
+      case _ => Seq.empty
+    }): _*)
+    println("Data Loaded:\nX-value\tY-value\tResult(1=accepted/0=rejected)\n" + data)
+
+    // plot sample
+    var X = data(::, 0 to 1)
+    var y = data(::, 2)
+    scatter(X(::, 0), X(::, 1), circleSize(0.02)(X.numRows), y2Color(y))
+    xlabel("X-value")
+    ylabel("Y-value")
+    title("Input data")
+
+    // learning parameter
+    // C: regularized parameter
+    // sigma: gaussian Kernel parameter
+    val C = 1d
+    val sigma = 0.5d
+
+    // learn svm
+    println("\n\npaused... press enter to start learning SVM.")
+    readLine
+    val model = trainSVM(X, y, C, gaussianKernel(sigma))
+
+    // plotting decision boundary
+    plotDecisionBoundary(X, y, model)
+
+    println("\n\nTo finish this program, close the result window.")
   }
 
-  def gaussianKernel(sigma: Double)(x1: VectorCol[Double], x2: VectorCol[Double]): Double
-  = exp(-1 * ((x1 :- x2).t * (x1 - x2)) / (2 * sigma * sigma))
+  // gaussian kernel
+  def gaussianKernel(sigma: Double)(x1: Vector[Double], x2: Vector[Double]): Double
+  = {
+    val _x1 = x1.asCol
+    val _x2 = x2.asCol
+    exp(-1 * ((_x1 - _x2).t * (_x1 - _x2)) / (2 * sigma * sigma))
+  }
 
+  // train SVM
+  // This is a simplified version of the SMO algorithm for training SVMs.
   def trainSVM(X: Matrix[Double], Y: VectorCol[Double], C: Double,
-               kernel: (VectorCol[Double], VectorCol[Double]) => Double,
-               tol: Double = 1e-3, max_passes: Int = 5): Unit = {
+               kernel: (Vector[Double], Vector[Double]) => Double,
+               tol: Double = 1e-3, max_passes: Int = 5): Model = {
     val m = X.numRows
     val n = X.numCols
     val Y2 = Vector.vertcat(Y)
-    Y2(Y findAll (_ == 0)) := -1 // remap 0 to -1
+    Y2(Y findAll (_ == 0d)) := -1d // remap 0 to -1
     val alphas = Vector.zeros[Double](m)
     var b = 0.0d
     val E = Vector.zeros[Double](m)
@@ -53,6 +99,8 @@ object SupportVectorMachineWithGaussianKernel {
       K(j, i) = K(i, j) // the matrix is symmetric.
     }
 
+    print("Training(C=%f) (This takes a few minutes.)\n".format(C))
+    var dots = 0
     while (passes < max_passes) {
       var num_alpha_changed = 0
       for (i <- 0 until m) {
@@ -124,7 +172,15 @@ object SupportVectorMachineWithGaussianKernel {
       } else {
         passes = 0
       }
+
+      print(".")
+      dots += 1
+      if (dots > 80) {
+        print("\n")
+        dots = 0
+      }
     }
+    print("Done! \n\n")
 
     val _idx = alphas.findAll(_ > 0.0d).toSeq
     val _X = X(_idx, ::)
@@ -134,6 +190,62 @@ object SupportVectorMachineWithGaussianKernel {
     val _alphas = alphas(_idx)
     val _w = ((alphas :* Y2).asRow * X).asCol
 
+    Model(_X, _Y, _kernel, _b, _alphas, _w)
   }
 
+  // predict by SVM Model
+  def predict(model: Model, X: Matrix[Double]): Vector[Double] = {
+    val pred = Vector.zeros[Double](X.numRows)
+    val p = Vector.zeros[Double](X.numRows)
+    for (i <- 0 until X.numRows) {
+      var prediction = 0d;
+      for (j <- 0 until model.X.numRows) {
+        prediction = prediction + model.alphas(j) * model.y(j) * model.kernelF(X(i, ::), model.X(j, ::))
+      }
+      p(i) = prediction + model.b;
+    }
+    pred(p.findAll(_ >= 0)) := 1.0d
+    pred(p.findAll(_ < 0)) := 0.0d
+    pred
+  }
+
+  // SVM Model
+  case class Model(X: Matrix[Double], y: Vector[Double], kernelF: (Vector[Double], Vector[Double]) => Double,
+                   b: Double, alphas: Vector[Double], w: Vector[Double])
+
+  def plotDecisionBoundary(X: Matrix[Double], y: Vector[Double], model: Model) = {
+    print("Detecting decision boundaries...")
+    // predict for all points.
+    val NUM = 100
+    val x1plot = linspace(X(::, 0).min, X(::, 0).max, NUM)
+    val x2plot = linspace(X(::, 1).min, X(::, 1).max, NUM)
+    val (x1Mesh, x2Mesh) = meshgrid(x1plot, x2plot)
+    val preds = DenseMatrix.zeros[Double](x1Mesh.numRows, x1Mesh.numCols)
+    for (i <- 0 until x1Mesh.numCols) {
+      val this_X: Matrix[Double] = DenseMatrix(x1Mesh(::, i).asRow, x2Mesh(::, i).asRow).t
+      preds(::, i) := predict(model, this_X)
+    }
+
+    // detect boundary points.
+    var bx1 = Seq[Double]()
+    var bx2 = Seq[Double]()
+    for (i <- 1 until preds.numRows - 1; j <- 1 until preds.numCols - 1) {
+      if (preds(i, j) == 0d && (preds(i - 1, j - 1) == 1d || preds(i - 1, j) == 1d || preds(i - 1, j + 1) == 1d
+        || preds(i, j - 1) == 1d || preds(i, j + 1) == 1d
+        || preds(i + 1, j) == 1d || preds(i + 1, j) == 1d || preds(i + 1, j + 1) == 1d)) {
+        bx1 = x1Mesh(i, j) +: bx1
+        bx2 = x2Mesh(i, j) +: bx2
+      }
+    }
+    print(" Done!\n")
+
+    // plot input data and detected boundary
+    clf
+    plot.hold = true
+    scatter(X(::, 0), X(::, 1), circleSize(0.02)(X.numRows), y2Color(y))
+    scatter(Vector(bx1: _*), Vector(bx2: _*), circleSize(0.02)(bx1.size), { case i => Color.YELLOW  }: Int ~> Paint)
+    xlabel("X")
+    ylabel("Y")
+    title("Learning result by SVM\n blue:accepted, red: rejected, yellow:learned decision boundary")
+  }
 }

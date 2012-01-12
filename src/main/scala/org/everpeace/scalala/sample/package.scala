@@ -47,4 +47,16 @@ package object sample {
     (theta, costHist)
   }
 
+  // construct mesh grid.
+  def meshgrid(x: Vector[Double], y: Vector[Double]): (Matrix[Double], Matrix[Double]) = {
+    val xMesh = DenseMatrix.zeros[Double](y.length, x.length)
+    for (i <- 0 until y.length) {
+      xMesh(i, ::) := x.asRow
+    }
+    val yMesh = DenseMatrix.zeros[Double](y.length, x.length)
+    for (i <- 0 until x.length) {
+      yMesh(::, i) := y.asCol
+    }
+    (xMesh, yMesh)
+  }
 }
